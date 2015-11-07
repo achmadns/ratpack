@@ -16,6 +16,7 @@
 
 package ratpack.websocket
 
+import io.netty.util.concurrent.Future
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import ratpack.exec.ExecController
@@ -28,6 +29,7 @@ import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 import static ratpack.stream.Streams.periodically
 import static ratpack.stream.Streams.publish
@@ -182,6 +184,41 @@ class WebSocketTestSpec extends RatpackGroovyDslSpec {
 
     cleanup:
     client?.closeBlocking()
+  }
+
+  def "can send and wait until flushed"() {
+    when:
+    def closing = new BlockingVariable<String>()
+    WebSocket ws
+
+    handlers {
+      get {
+        context.websocket({
+          ws = it
+          2
+        } as Function) connect {
+          it.onClose {
+          } onMessage {
+            it.connection.sendOp("bar").promise().next {
+              closing.set("done")
+            }
+          }
+        }
+      }
+    }
+
+    and:
+    server.start()
+    def client = openWsClient()
+    client.connectBlocking()
+    client.send("foo")
+
+    then:
+    closing.get() == "done"
+
+    cleanup:
+    client?.closeBlocking()
+    ws?.close()
   }
 
   def "websocket closes correctly when a streaming error occurs"() {

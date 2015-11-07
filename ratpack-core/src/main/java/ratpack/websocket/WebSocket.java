@@ -18,6 +18,7 @@ package ratpack.websocket;
 
 import io.netty.buffer.ByteBuf;
 import ratpack.api.NonBlocking;
+import ratpack.exec.Operation;
 
 public interface WebSocket {
 
@@ -34,5 +35,11 @@ public interface WebSocket {
 
   @NonBlocking
   void send(ByteBuf text);
+
+  @NonBlocking
+  Operation sendOp(String text);
+
+  @NonBlocking
+  Operation sendOp(ByteBuf text);
 
 }
