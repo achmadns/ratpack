@@ -17,7 +17,10 @@
 package ratpack.websocket;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.Future;
 import ratpack.api.NonBlocking;
+import ratpack.exec.Promise;
+import ratpack.func.Action;
 
 public interface WebSocket {
 
@@ -34,5 +37,11 @@ public interface WebSocket {
 
   @NonBlocking
   void send(ByteBuf text);
+
+  @NonBlocking
+  void send(String text, Action<Future<? super Void>> done);
+
+  @NonBlocking
+  void send(ByteBuf text, Action<Future<? super Void>> done);
 
 }

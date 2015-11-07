@@ -18,8 +18,11 @@ package ratpack.websocket.internal;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.Future;
+import ratpack.func.Action;
 import ratpack.websocket.WebSocket;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,12 +58,29 @@ public class DefaultWebSocket implements WebSocket {
 
   @Override
   public void send(String text) {
-    channel.writeAndFlush(new TextWebSocketFrame(text));
+    writeAndFlush(text);
   }
 
   @Override
   public void send(ByteBuf text) {
-    channel.writeAndFlush(new TextWebSocketFrame(text));
+    writeAndFlush(text);
   }
 
+  @Override
+  public void send(String text, Action<Future<? super Void>> done) {
+    writeAndFlush(text).addListener(future -> done.execute(future));
+  }
+
+  @Override
+  public void send(ByteBuf text, Action<Future<? super Void>> done) {
+    writeAndFlush(text).addListener(future -> done.execute(future));
+  }
+
+  private ChannelFuture writeAndFlush(String text) {
+    return channel.writeAndFlush(new TextWebSocketFrame(text));
+  }
+
+  private ChannelFuture writeAndFlush(ByteBuf text) {
+    return channel.writeAndFlush(new TextWebSocketFrame(text));
+  }
 }
