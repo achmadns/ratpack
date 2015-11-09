@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.Future;
 import ratpack.exec.Operation;
-import ratpack.func.Action;
+import ratpack.exec.Promise;
 import ratpack.websocket.WebSocket;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,6 +63,7 @@ public class DefaultWebSocket implements WebSocket {
   }
 
   private ChannelFuture writeAndFlush(String text) {
+    System.out.println("about to flush");
     return channel.writeAndFlush(new TextWebSocketFrame(text));
   }
 
@@ -77,13 +78,14 @@ public class DefaultWebSocket implements WebSocket {
 
   @Override
   public Operation sendOp(String text) {
-    final Operation operation = Operation.of(() -> {
-    });
-    writeAndFlush(text).addListener(future -> {
-      operation.next(() -> {
-      });
-    });
-    return operation;
+    return Promise.<Void>of(upstream ->
+      writeAndFlush(text).addListener(future -> {
+        final Throwable error = future.cause();
+        if (error == null)
+          upstream.success(null);
+        else
+          upstream.error(error);
+      })).operation();
   }
 
   @Override

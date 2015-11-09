@@ -20,8 +20,11 @@ import io.netty.util.concurrent.Future
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import ratpack.exec.ExecController
+import ratpack.exec.Operation
 import ratpack.func.Function
+import ratpack.test.exec.ExecHarness
 import ratpack.test.internal.RatpackGroovyDslSpec
+import spock.lang.AutoCleanup
 import spock.lang.Timeout
 import spock.util.concurrent.BlockingVariable
 
@@ -38,6 +41,9 @@ import static ratpack.websocket.WebSockets.websocketBroadcast
 
 @Timeout(30)
 class WebSocketTestSpec extends RatpackGroovyDslSpec {
+
+  @AutoCleanup
+  def exec = ExecHarness.harness()
 
   def "can send and receive websockets"() {
     when:
@@ -199,7 +205,9 @@ class WebSocketTestSpec extends RatpackGroovyDslSpec {
         } as Function) connect {
           it.onClose {
           } onMessage {
-            it.connection.sendOp("bar").promise().next {
+            exec.execute {
+              ws.sendOp("bar")
+            }.next {
               closing.set("done")
             }
           }
