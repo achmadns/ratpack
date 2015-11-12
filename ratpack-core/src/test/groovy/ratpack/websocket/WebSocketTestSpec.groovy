@@ -194,7 +194,7 @@ class WebSocketTestSpec extends RatpackGroovyDslSpec {
 
   def "can send and wait until flushed"() {
     when:
-    def closing = new BlockingVariable<String>()
+    def closing = new BlockingVariable<String>(3)
     WebSocket ws
 
     handlers {
@@ -203,13 +203,8 @@ class WebSocketTestSpec extends RatpackGroovyDslSpec {
           ws = it
           2
         } as Function) connect {
-          it.onClose {
-          } onMessage {
-            exec.execute {
-              ws.sendOp("bar")
-            }.next {
-              closing.set("done")
-            }
+          it.onMessage {
+            ws.sendOp("bar").next { closing.set("done") }
           }
         }
       }

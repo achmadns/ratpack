@@ -19,9 +19,9 @@ package ratpack.websocket.internal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.util.concurrent.Future;
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
 import ratpack.websocket.WebSocket;
@@ -63,7 +63,6 @@ public class DefaultWebSocket implements WebSocket {
   }
 
   private ChannelFuture writeAndFlush(String text) {
-    System.out.println("about to flush");
     return channel.writeAndFlush(new TextWebSocketFrame(text));
   }
 
@@ -79,12 +78,15 @@ public class DefaultWebSocket implements WebSocket {
   @Override
   public Operation sendOp(String text) {
     return Promise.<Void>of(upstream ->
-      writeAndFlush(text).addListener(future -> {
-        final Throwable error = future.cause();
-        if (error == null)
-          upstream.success(null);
-        else
-          upstream.error(error);
+      channel.writeAndFlush(new TextWebSocketFrame(text)).addListener(new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+          final Throwable error = future.cause();
+          if (error == null)
+            upstream.success(null);
+          else
+            upstream.error(error);
+        }
       })).operation();
   }
 
