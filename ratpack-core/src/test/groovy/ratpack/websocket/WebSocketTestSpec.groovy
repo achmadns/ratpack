@@ -16,9 +16,11 @@
 
 package ratpack.websocket
 
+import io.netty.util.concurrent.Future
 import org.reactivestreams.Publisher
 import org.reactivestreams.Subscriber
 import ratpack.exec.ExecController
+import ratpack.func.Action
 import ratpack.func.Function
 import ratpack.test.internal.RatpackGroovyDslSpec
 import spock.lang.Timeout
@@ -88,6 +90,46 @@ class WebSocketTestSpec extends RatpackGroovyDslSpec {
 
     cleanup:
     client?.closeBlocking()
+  }
+
+  def "can send and wait until flushed"() {
+    when:
+    def closing = new BlockingVariable<Integer>(3)
+    WebSocket ws
+
+    handlers {
+      get {
+        context.websocket({
+          ws = it
+          2
+        } as Function) connect {
+          it.onMessage {
+            ws.send("bar", new Action<Future<? super Void>>() {
+              @Override
+              void execute(Future<? super Void> future) throws Exception {
+                if(future.isSuccess())
+                  closing.set(0)
+                else
+                  closing.set(1)
+              }
+            })
+          }
+        }
+      }
+    }
+
+    and:
+    server.start()
+    def client = openWsClient()
+    client.connectBlocking()
+    client.send("foo")
+
+    then:
+    closing.get() == 0
+
+    cleanup:
+    client?.closeBlocking()
+    ws?.close()
   }
 
   def RecordingWebSocketClient openWsClient() {
